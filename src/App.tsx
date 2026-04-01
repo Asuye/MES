@@ -18,14 +18,21 @@ import System from './pages/System'
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
 
+  const handleLogin = () => {
+    console.log('handleLogin called')
+    setIsAuthenticated(true)
+  }
+
   const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     return isAuthenticated ? children : <Navigate to="/login" />
   }
 
+  console.log('App render, isAuthenticated:', isAuthenticated)
+
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login onLogin={() => setIsAuthenticated(true)} />} />
+        <Route path="/login" element={<Login onLogin={handleLogin} />} />
         <Route path="/" element={
           <ProtectedRoute>
             <Home />

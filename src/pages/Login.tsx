@@ -11,6 +11,7 @@ export default function Login({ onLogin }: LoginProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Login submitted')
     onLogin()
   }
 
@@ -58,9 +59,13 @@ export default function Login({ onLogin }: LoginProps) {
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              onClick={() => {
+                console.log('Button clicked directly')
+                onLogin()
+              }}
+              className="w-full bg-blue-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl active:scale-95"
             >
-              登录系统
+              🚀 登录系统
             </button>
           </form>
         </div>
