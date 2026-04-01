@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -16,48 +16,29 @@ import {
   Menu,
   X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
+
+interface HomeProps {
+  children: ReactNode
+  onLogout: () => void
+}
 
 const menuItems = [
   { path: '/dashboard', icon: LayoutDashboard, label: '仪表盘' },
-  { 
-    path: '/production/planning', 
-    icon: Calendar, 
-    label: '生产计划' 
-  },
-  { 
-    path: '/production/batch', 
-    icon: Package, 
-    label: '批次管理' 
-  },
-  { 
-    path: '/production/ebr', 
-    icon: FileText, 
-    label: '电子批记录' 
-  },
-  { 
-    path: '/production/weighing', 
-    icon: Scale, 
-    label: '称量配料' 
-  },
-  { 
-    path: '/production/process', 
-    icon: Activity, 
-    label: '工艺监控' 
-  },
+  { path: '/production/planning', icon: Calendar, label: '生产计划' },
+  { path: '/production/batch', icon: Package, label: '批次管理' },
+  { path: '/production/ebr', icon: FileText, label: '电子批记录' },
+  { path: '/production/weighing', icon: Scale, label: '称量配料' },
+  { path: '/production/process', icon: Activity, label: '工艺监控' },
   { path: '/equipment', icon: Factory, label: '设备管理' },
   { path: '/environment', icon: Thermometer, label: '环境监测' },
   { path: '/traceability', icon: Search, label: '追溯查询' },
-  { 
-    path: '/quality/compliance', 
-    icon: Shield, 
-    label: '质量合规' 
-  },
+  { path: '/quality/compliance', icon: Shield, label: '质量合规' },
   { path: '/reports', icon: BarChart3, label: '报表中心' },
   { path: '/system', icon: Settings, label: '系统管理' },
 ]
 
-export default function Home() {
+export default function Home({ children, onLogout }: HomeProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -108,13 +89,16 @@ export default function Home() {
             </div>
             <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">管理员</div>
-              <button className="p-2 hover:bg-gray-100 rounded-lg text-gray-600">
+              <button 
+                onClick={onLogout}
+                className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+              >
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
           </header>
           <main className="flex-1 overflow-auto p-6">
-            <Outlet />
+            {children}
           </main>
         </div>
       </div>

@@ -9,9 +9,8 @@ export default function Login({ onLogin }: LoginProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log('Login submitted')
+  const handleLoginClick = () => {
+    console.log('Login button clicked!')
     onLogin()
   }
 
@@ -26,7 +25,7 @@ export default function Login({ onLogin }: LoginProps) {
           <p className="text-gray-600">固体制剂车间 GMP 合规管理</p>
         </div>
         <div className="bg-white rounded-xl shadow-lg p-8">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 用户名
@@ -58,16 +57,16 @@ export default function Login({ onLogin }: LoginProps) {
               </div>
             </div>
             <button
-              type="submit"
-              onClick={() => {
-                console.log('Button clicked directly')
-                onLogin()
-              }}
-              className="w-full bg-blue-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl active:scale-95"
+              type="button"
+              onClick={handleLoginClick}
+              className="w-full bg-blue-600 text-white py-4 px-4 rounded-xl font-bold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl active:scale-95 cursor-pointer"
             >
               🚀 登录系统
             </button>
-          </form>
+            <p className="text-center text-sm text-gray-500">
+              点击登录按钮即可进入系统
+            </p>
+          </div>
         </div>
       </div>
     </div>
