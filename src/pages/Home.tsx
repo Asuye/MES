@@ -59,15 +59,19 @@ export default function Home({ children, onLogout }: HomeProps) {
                 return (
                   <button
                     key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-colors ${
+                    type="button"
+                    onClick={() => {
+                      console.log('Navigating to:', item.path)
+                      navigate(item.path)
+                    }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all cursor-pointer hover:scale-[1.02] active:scale-[0.98] ${
                       isActive 
-                        ? 'bg-blue-600 text-white' 
-                        : 'text-slate-300 hover:bg-slate-800'
+                        ? 'bg-blue-600 text-white shadow-lg' 
+                        : 'text-slate-300 hover:bg-slate-800 hover:text-white'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
-                    <span>{item.label}</span>
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    <span className="flex-1">{item.label}</span>
                   </button>
                 )
               })}
@@ -75,11 +79,15 @@ export default function Home({ children, onLogout }: HomeProps) {
           </div>
         )}
         <div className="flex-1 flex flex-col overflow-hidden">
-          <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+          <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-4">
               <button 
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 hover:bg-gray-100 rounded-lg"
+                type="button"
+                onClick={() => {
+                  console.log('Toggle sidebar clicked')
+                  setSidebarOpen(!sidebarOpen)
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
               >
                 {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </button>
@@ -90,8 +98,12 @@ export default function Home({ children, onLogout }: HomeProps) {
             <div className="flex items-center gap-4">
               <div className="text-sm text-gray-600">管理员</div>
               <button 
-                onClick={onLogout}
-                className="p-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                type="button"
+                onClick={() => {
+                  console.log('Logout clicked')
+                  onLogout()
+                }}
+                className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 cursor-pointer transition-colors"
               >
                 <LogOut className="w-5 h-5" />
               </button>
