@@ -1,63 +1,39 @@
-import React, { useState } from 'react';
-import { CheckCircle, AlertCircle, FileText, BarChart3, Shield, Edit } from 'lucide-react';
-
-interface QualityInspection {
-  id: string;
-  batchId: string;
-  product: string;
-  inspector: string;
-  date: string;
-  status: 'pass' | 'fail' | 'pending';
-  testResults: {
-    name: string;
-    value: string;
-    standard: string;
-    pass: boolean;
-  }[];
-}
+import React, { useState, useEffect } from 'react';
+import { CheckCircle, AlertCircle, FileText, BarChart3, Shield, Edit, FileDown } from 'lucide-react';
+import { qualityService } from '../services/api';
+import { QualityInspection, TestResult } from '../types';
+import Table from '../components/Table';
+import Button from '../components/Button';
 
 const Quality: React.FC = () => {
-  const [inspections, setInspections] = useState<QualityInspection[]>([
-    {
-      id: '1',
-      batchId: 'BATCH-2024-001',
-      product: '阿司匹林片',
-      inspector: '质量员',
-      date: '2024-01-15 16:30:00',
-      status: 'pass',
-      testResults: [
-        { name: '含量', value: '99.8%', standard: '95.0%-105.0%', pass: true },
-        { name: '崩解时限', value: '15分钟', standard: '≤30分钟', pass: true },
-        { name: '溶出度', value: '98.5%', standard: '≥80.0%', pass: true },
-      ],
-    },
-    {
-      id: '2',
-      batchId: 'BATCH-2024-002',
-      product: '布洛芬片',
-      inspector: '质量员',
-      date: '2024-01-16 14:00:00',
-      status: 'pending',
-      testResults: [
-        { name: '含量', value: '98.2%', standard: '95.0%-105.0%', pass: true },
-        { name: '崩解时限', value: '22分钟', standard: '≤30分钟', pass: true },
-        { name: '溶出度', value: '', standard: '≥80.0%', pass: false },
-      ],
-    },
-    {
-      id: '3',
-      batchId: 'BATCH-2023-12-001',
-      product: '对乙酰氨基酚片',
-      inspector: '质量员',
-      date: '2023-12-30 10:00:00',
-      status: 'fail',
-      testResults: [
-        { name: '含量', value: '94.5%', standard: '95.0%-105.0%', pass: false },
-        { name: '崩解时限', value: '25分钟', standard: '≤30分钟', pass: true },
-        { name: '溶出度', value: '85.2%', standard: '≥80.0%', pass: true },
-      ],
-    },
-  ]);
+  const [inspections, setInspections] = useState<QualityInspection[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 获取质量检验数据
+  const fetchInspections = async () => {
+    try {
+      setLoading(true);
+      const data = await qualityService.getInspections();
+      setInspections(data);
+    } catch (error) {
+      console.error('获取质量检验数据失败:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchInspections();
+  }, []);
+
+  // 刷新数据
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchInspections();
+  };
 
   const getStatusColor = (status: QualityInspection['status']) => {
     switch (status) {
@@ -85,12 +61,74 @@ const Quality: React.FC = () => {
     }
   };
 
+  // 表格列配置
+  const columns = [
+    { 
+      key: 'id', 
+      label: '检验编号', 
+      sortable: true,
+      render: (row: QualityInspection) => `QC-${row.date.substring(0, 10).replace(/-/g, '')}-${row.id}`
+    },
+    { key: 'batchId', label: '批次号', sortable: true },
+    { key: 'product', label: '产品', sortable: true },
+    { key: 'inspector', label: '检验员', sortable: true },
+    { key: 'date', label: '检验日期', sortable: true },
+    { 
+      key: 'status', 
+      label: '状态', 
+      sortable: true,
+      render: (row: QualityInspection) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(row.status)}`}>
+          {getStatusText(row.status)}
+        </span>
+      )
+    },
+    { 
+      key: 'actions', 
+      label: '操作',
+      width: '180px',
+      render: (row: QualityInspection) => (
+        <div className="flex items-center justify-end space-x-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            className="mr-2"
+          >
+            详情
+          </Button>
+          <Button 
+            variant="success" 
+            size="sm"
+          >
+            <FileDown size={16} className="mr-1" />
+            报告
+          </Button>
+        </div>
+      )
+    },
+  ];
+
+  // 计算统计数据
+  const totalInspections = inspections.length;
+  const passedInspections = inspections.filter(inspection => inspection.status === 'pass').length;
+  const failedInspections = inspections.filter(inspection => inspection.status === 'fail').length;
+  const pendingInspections = inspections.filter(inspection => inspection.status === 'pending').length;
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">质量管理</h1>
-        <p className="text-gray-600">质量检验和合规管理</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">质量管理</h1>
+          <p className="text-gray-600">质量检验和合规管理</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          刷新
+        </Button>
       </div>
 
       {/* 质量概览 */}
@@ -102,7 +140,7 @@ const Quality: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">检验批次</p>
-              <p className="text-2xl font-bold text-gray-800">3</p>
+              <p className="text-2xl font-bold text-gray-800">{totalInspections}</p>
             </div>
           </div>
         </div>
@@ -113,7 +151,7 @@ const Quality: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">合格</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{passedInspections}</p>
             </div>
           </div>
         </div>
@@ -124,7 +162,7 @@ const Quality: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">不合格</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{failedInspections}</p>
             </div>
           </div>
         </div>
@@ -135,84 +173,27 @@ const Quality: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">待检验</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{pendingInspections}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* 检验列表 */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">质量检验记录</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+          <Button variant="primary">
             新增检验
-          </button>
+          </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  检验编号
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  批次号
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  产品
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  检验员
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  检验日期
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {inspections.map((inspection) => (
-                <tr key={inspection.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    QC-{inspection.date.substring(0, 10).replace(/-/g, '')}-{inspection.id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inspection.batchId}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inspection.product}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inspection.inspector}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inspection.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(inspection.status)}`}>
-                      {getStatusText(inspection.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">
-                      详情
-                    </button>
-                    <button className="text-green-600 hover:text-green-900">
-                      报告
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          data={inspections}
+          loading={loading}
+          emptyText="暂无质量检验记录"
+        />
       </div>
     </div>
   );

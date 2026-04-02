@@ -7,7 +7,10 @@ import Equipment from './pages/Equipment';
 import Material from './pages/Material';
 import Report from './pages/Report';
 import Login from './pages/Login';
-import { Settings, Package, Shield, Wrench, Package as MaterialIcon, BarChart3, LogOut, Menu, X } from 'lucide-react';
+import Product from './pages/Product';
+import Recipe from './pages/Recipe';
+import WorkOrder from './pages/WorkOrder';
+import { Settings, Package, Shield, Wrench, Package as MaterialIcon, BarChart3, LogOut, Menu, X, Box, FileText, ListChecks } from 'lucide-react';
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
@@ -18,6 +21,9 @@ const Sidebar: React.FC = () => {
     { name: '质量管理', path: '/quality', icon: Shield },
     { name: '设备管理', path: '/equipment', icon: Wrench },
     { name: '物料管理', path: '/material', icon: MaterialIcon },
+    { name: '产品管理', path: '/product', icon: Box },
+    { name: '配方管理', path: '/recipe', icon: FileText },
+    { name: '工作订单', path: '/workorder', icon: ListChecks },
     { name: '报表分析', path: '/report', icon: BarChart3 },
     { name: '系统管理', path: '/system', icon: Settings },
   ];
@@ -93,9 +99,40 @@ const Sidebar: React.FC = () => {
   );
 };
 
+const TopBar: React.FC = () => {
+  return (
+    <div className="bg-white shadow-sm border-b">
+      <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center">
+          <h2 className="text-lg font-semibold text-gray-800">
+            {document.title}
+          </h2>
+        </div>
+        <div className="flex items-center space-x-4">
+          <button className="p-2 text-gray-500 hover:bg-gray-100 rounded-full">
+            <span className="sr-only">通知</span>
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+          </button>
+          <div className="relative">
+            <button className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium">
+                A
+              </div>
+              <span className="text-sm font-medium text-gray-700">管理员</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MainContent: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <div className="md:ml-64 min-h-screen bg-gray-50">
+      <TopBar />
       <div className="p-6">
         {children}
       </div>
@@ -181,6 +218,39 @@ function App() {
               <Sidebar />
               <MainContent>
                 <System />
+              </MainContent>
+            </>
+          }
+        />
+        <Route
+          path="/product"
+          element={
+            <>
+              <Sidebar />
+              <MainContent>
+                <Product />
+              </MainContent>
+            </>
+          }
+        />
+        <Route
+          path="/recipe"
+          element={
+            <>
+              <Sidebar />
+              <MainContent>
+                <Recipe />
+              </MainContent>
+            </>
+          }
+        />
+        <Route
+          path="/workorder"
+          element={
+            <>
+              <Sidebar />
+              <MainContent>
+                <WorkOrder />
               </MainContent>
             </>
           }

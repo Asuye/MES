@@ -1,60 +1,62 @@
-import React, { useState } from 'react';
-import { Package, BarChart3, AlertCircle, CheckCircle, TrendingUp, TrendingDown } from 'lucide-react';
-
-interface Material {
-  id: string;
-  name: string;
-  code: string;
-  type: string;
-  stock: number;
-  unit: string;
-  minStock: number;
-  status: 'normal' | 'low' | 'out';
-}
+import React, { useState, useEffect } from 'react';
+import { Package, BarChart3, AlertCircle, CheckCircle, TrendingUp, TrendingDown, ShoppingCart } from 'lucide-react';
+import { materialService } from '../services/api';
+import { Material } from '../types';
+import Table from '../components/Table';
+import Button from '../components/Button';
 
 const Material: React.FC = () => {
-  const [materials, setMaterials] = useState<Material[]>([
-    {
-      id: '1',
-      name: '阿司匹林原料',
-      code: 'MAT-001',
-      type: '原料',
-      stock: 1000,
-      unit: 'kg',
-      minStock: 500,
-      status: 'normal',
-    },
-    {
-      id: '2',
-      name: '布洛芬原料',
-      code: 'MAT-002',
-      type: '原料',
-      stock: 300,
-      unit: 'kg',
-      minStock: 400,
-      status: 'low',
-    },
-    {
-      id: '3',
-      name: '对乙酰氨基酚原料',
-      code: 'MAT-003',
-      type: '原料',
-      stock: 0,
-      unit: 'kg',
-      minStock: 300,
-      status: 'out',
-    },
-    {
-      id: '4',
-      name: '包装材料',
-      code: 'MAT-004',
-      type: '辅料',
-      stock: 5000,
-      unit: '个',
-      minStock: 1000,
-      status: 'normal',
-    },
-  ]);
+  const [materials, setMaterials] = useState<Material[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 获取物料数据
+  const fetchMaterials = async () => {
+    try {
+      setLoading(true);
+      const data = await materialService.getMaterials();
+      setMaterials(data);
+    } catch (error) {
+      console.error('获取物料数据失败:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 更新物料库存
+  const handleUpdateStock = async (id: string, quantity: number) => {
+    try {
+      const updatedMaterial = await materialService.updateStock(id, quantity);
+      setMaterials(prevMaterials => 
+        prevMaterials.map(material => material.id === id ? updatedMaterial : material)
+      );
+    } catch (error) {
+      console.error('更新物料库存失败:', error);
+    }
+  };
+
+  // 创建采购订单
+  const handleCreatePurchaseOrder = async (id: string, quantity: number) => {
+    try {
+      await materialService.createPurchaseOrder(id, quantity);
+      // 这里可以添加采购订单创建成功的提示
+      alert('采购订单创建成功');
+    } catch (error) {
+      console.error('创建采购订单失败:', error);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchMaterials();
+  }, []);
+
+  // 刷新数据
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchMaterials();
+  };
 
   const getStatusColor = (status: Material['status']) => {
     switch (status) {
@@ -82,12 +84,72 @@ const Material: React.FC = () => {
     }
   };
 
+  // 表格列配置
+  const columns = [
+    { key: 'name', label: '物料名称', sortable: true },
+    { key: 'code', label: '物料编码', sortable: true },
+    { key: 'type', label: '类型', sortable: true },
+    { key: 'stock', label: '库存', sortable: true },
+    { key: 'unit', label: '单位', sortable: true },
+    { key: 'minStock', label: '最低库存', sortable: true },
+    { 
+      key: 'status', 
+      label: '状态', 
+      sortable: true,
+      render: (row: Material) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(row.status)}`}>
+          {getStatusText(row.status)}
+        </span>
+      )
+    },
+    { key: 'supplier', label: '供应商', sortable: true },
+    { 
+      key: 'actions', 
+      label: '操作',
+      width: '200px',
+      render: (row: Material) => (
+        <div className="flex items-center justify-end space-x-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            className="mr-2"
+          >
+            详情
+          </Button>
+          <Button 
+            variant="success" 
+            size="sm"
+            onClick={() => handleCreatePurchaseOrder(row.id, row.minStock * 2)}
+          >
+            <ShoppingCart size={16} className="mr-1" />
+            采购
+          </Button>
+        </div>
+      )
+    },
+  ];
+
+  // 计算统计数据
+  const totalMaterials = materials.length;
+  const normalMaterials = materials.filter(material => material.status === 'normal').length;
+  const lowMaterials = materials.filter(material => material.status === 'low').length;
+  const outMaterials = materials.filter(material => material.status === 'out').length;
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">物料管理</h1>
-        <p className="text-gray-600">物料库存和采购管理</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">物料管理</h1>
+          <p className="text-gray-600">物料库存和采购管理</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          刷新
+        </Button>
       </div>
 
       {/* 物料概览 */}
@@ -99,7 +161,7 @@ const Material: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">物料种类</p>
-              <p className="text-2xl font-bold text-gray-800">4</p>
+              <p className="text-2xl font-bold text-gray-800">{totalMaterials}</p>
             </div>
           </div>
         </div>
@@ -110,7 +172,7 @@ const Material: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">库存正常</p>
-              <p className="text-2xl font-bold text-gray-800">2</p>
+              <p className="text-2xl font-bold text-gray-800">{normalMaterials}</p>
             </div>
           </div>
         </div>
@@ -121,7 +183,7 @@ const Material: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">库存不足</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{lowMaterials}</p>
             </div>
           </div>
         </div>
@@ -132,90 +194,27 @@ const Material: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">缺货</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{outMaterials}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* 物料列表 */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">物料列表</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+          <Button variant="primary">
             新增物料
-          </button>
+          </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  物料名称
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  物料编码
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  类型
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  库存
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  单位
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  最低库存
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {materials.map((material) => (
-                <tr key={material.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {material.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {material.code}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {material.type}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {material.stock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {material.unit}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {material.minStock}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(material.status)}`}>
-                      {getStatusText(material.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">
-                      详情
-                    </button>
-                    <button className="text-green-600 hover:text-green-900">
-                      采购
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          data={materials}
+          loading={loading}
+          emptyText="暂无物料数据"
+        />
       </div>
     </div>
   );

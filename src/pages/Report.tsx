@@ -1,42 +1,60 @@
-import React, { useState } from 'react';
-import { BarChart3, LineChart, PieChart, FileText, Download, Filter } from 'lucide-react';
-
-interface Report {
-  id: string;
-  name: string;
-  type: string;
-  date: string;
-  generatedBy: string;
-  status: 'generated' | 'pending';
-}
+import React, { useState, useEffect } from 'react';
+import { BarChart3, LineChart, PieChart, FileText, Download, Filter, FileDown, FileUp } from 'lucide-react';
+import { reportService } from '../services/api';
+import { Report } from '../types';
+import Table from '../components/Table';
+import Button from '../components/Button';
 
 const Report: React.FC = () => {
-  const [reports, setReports] = useState<Report[]>([
-    {
-      id: '1',
-      name: '生产日报',
-      type: '生产报表',
-      date: '2024-01-16',
-      generatedBy: 'admin',
-      status: 'generated',
-    },
-    {
-      id: '2',
-      name: '质量月报',
-      type: '质量报表',
-      date: '2024-01-31',
-      generatedBy: 'quality',
-      status: 'pending',
-    },
-    {
-      id: '3',
-      name: '设备维护报告',
-      type: '设备报表',
-      date: '2024-01-15',
-      generatedBy: 'maintenance',
-      status: 'generated',
-    },
-  ]);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [generating, setGenerating] = useState(false);
+
+  // 获取报表数据
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      const data = await reportService.getReports();
+      setReports(data);
+    } catch (error) {
+      console.error('获取报表数据失败:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 生成报表
+  const handleGenerateReport = async (type: string) => {
+    try {
+      setGenerating(true);
+      const newReport = await reportService.generateReport(type, { date: new Date().toISOString().slice(0, 10) });
+      setReports(prevReports => [newReport, ...prevReports]);
+    } catch (error) {
+      console.error('生成报表失败:', error);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // 下载报表
+  const handleDownloadReport = (fileUrl: string) => {
+    // 模拟下载
+    console.log('下载报表:', fileUrl);
+    alert('报表下载开始');
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchReports();
+  }, []);
+
+  // 刷新数据
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchReports();
+  };
 
   const getStatusColor = (status: Report['status']) => {
     switch (status) {
@@ -60,12 +78,80 @@ const Report: React.FC = () => {
     }
   };
 
+  // 表格列配置
+  const columns = [
+    { key: 'name', label: '报表名称', sortable: true },
+    { key: 'type', label: '类型', sortable: true },
+    { key: 'date', label: '日期', sortable: true },
+    { key: 'generatedBy', label: '生成人', sortable: true },
+    { 
+      key: 'status', 
+      label: '状态', 
+      sortable: true,
+      render: (row: Report) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(row.status)}`}>
+          {getStatusText(row.status)}
+        </span>
+      )
+    },
+    { 
+      key: 'actions', 
+      label: '操作',
+      width: '180px',
+      render: (row: Report) => (
+        <div className="flex items-center justify-end space-x-2">
+          {row.status === 'generated' && (
+            <>
+              <Button 
+                variant="primary" 
+                size="sm"
+                className="mr-2"
+              >
+                查看
+              </Button>
+              <Button 
+                variant="success" 
+                size="sm"
+                onClick={() => handleDownloadReport(row.fileUrl)}
+              >
+                <FileDown size={16} className="mr-1" />
+                下载
+              </Button>
+            </>
+          )}
+          {row.status === 'pending' && (
+            <Button 
+              variant="warning" 
+              size="sm"
+            >
+              取消
+            </Button>
+          )}
+        </div>
+      )
+    },
+  ];
+
+  // 计算统计数据
+  const productionReports = reports.filter(report => report.type === '生产报表').length;
+  const qualityReports = reports.filter(report => report.type === '质量报表').length;
+  const equipmentReports = reports.filter(report => report.type === '设备报表').length;
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">报表分析</h1>
-        <p className="text-gray-600">生产和质量报表管理</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">报表分析</h1>
+          <p className="text-gray-600">生产和质量报表管理</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          刷新
+        </Button>
       </div>
 
       {/* 报表概览 */}
@@ -77,7 +163,7 @@ const Report: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">生产报表</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{productionReports}</p>
             </div>
           </div>
         </div>
@@ -88,7 +174,7 @@ const Report: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">质量报表</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{qualityReports}</p>
             </div>
           </div>
         </div>
@@ -99,87 +185,42 @@ const Report: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">设备报表</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{equipmentReports}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* 报表列表 */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">报表列表</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
-            生成报表
-          </button>
+          <div className="space-x-2">
+            <Button 
+              variant="primary" 
+              onClick={() => handleGenerateReport('生产')}
+              disabled={generating}
+            >
+              <FileUp size={16} className="mr-1" />
+              生成生产报表
+            </Button>
+            <Button 
+              variant="primary" 
+              onClick={() => handleGenerateReport('质量')}
+              disabled={generating}
+            >
+              <FileUp size={16} className="mr-1" />
+              生成质量报表
+            </Button>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  报表名称
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  类型
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  日期
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  生成人
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reports.map((report) => (
-                <tr key={report.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {report.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {report.type}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {report.date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {report.generatedBy}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(report.status)}`}>
-                      {getStatusText(report.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    {report.status === 'generated' && (
-                      <>
-                        <button className="text-blue-600 hover:text-blue-900 mr-3">
-                          查看
-                        </button>
-                        <button className="text-green-600 hover:text-green-900">
-                          下载
-                        </button>
-                      </>
-                    )}
-                    {report.status === 'pending' && (
-                      <button className="text-yellow-600 hover:text-yellow-900">
-                        取消
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          data={reports}
+          loading={loading}
+          emptyText="暂无报表数据"
+        />
       </div>
 
       {/* 数据可视化 */}

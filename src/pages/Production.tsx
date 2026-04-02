@@ -1,50 +1,63 @@
-import React, { useState } from 'react';
-import { Calendar, Clock, BarChart3, Package, CheckCircle, AlertCircle } from 'lucide-react';
-
-interface ProductionBatch {
-  id: string;
-  name: string;
-  product: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  startDate: string;
-  endDate: string;
-  quantity: number;
-  targetQuantity: number;
-}
+import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, BarChart3, Package, CheckCircle, AlertCircle, Play, Pause } from 'lucide-react';
+import { productionService } from '../services/api';
+import { ProductionBatch } from '../types';
+import Table from '../components/Table';
+import Button from '../components/Button';
 
 const Production: React.FC = () => {
-  const [batches, setBatches] = useState<ProductionBatch[]>([
-    {
-      id: '1',
-      name: 'BATCH-2024-001',
-      product: '阿司匹林片',
-      status: 'completed',
-      startDate: '2024-01-15 08:00:00',
-      endDate: '2024-01-15 16:00:00',
-      quantity: 10000,
-      targetQuantity: 10000,
-    },
-    {
-      id: '2',
-      name: 'BATCH-2024-002',
-      product: '布洛芬片',
-      status: 'running',
-      startDate: '2024-01-16 09:30:00',
-      endDate: '',
-      quantity: 5000,
-      targetQuantity: 8000,
-    },
-    {
-      id: '3',
-      name: 'BATCH-2024-003',
-      product: '对乙酰氨基酚片',
-      status: 'pending',
-      startDate: '2024-01-17 08:00:00',
-      endDate: '',
-      quantity: 0,
-      targetQuantity: 12000,
-    },
-  ]);
+  const [batches, setBatches] = useState<ProductionBatch[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // 获取生产批次数据
+  const fetchBatches = async () => {
+    try {
+      setLoading(true);
+      const data = await productionService.getBatches();
+      setBatches(data);
+    } catch (error) {
+      console.error('获取生产批次失败:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // 开始生产批次
+  const handleStartBatch = async (batchId: string) => {
+    try {
+      const updatedBatch = await productionService.startBatch(batchId);
+      setBatches(prevBatches => 
+        prevBatches.map(batch => batch.id === batchId ? updatedBatch : batch)
+      );
+    } catch (error) {
+      console.error('开始生产批次失败:', error);
+    }
+  };
+
+  // 完成生产批次
+  const handleCompleteBatch = async (batchId: string, quantity: number) => {
+    try {
+      const updatedBatch = await productionService.completeBatch(batchId, quantity);
+      setBatches(prevBatches => 
+        prevBatches.map(batch => batch.id === batchId ? updatedBatch : batch)
+      );
+    } catch (error) {
+      console.error('完成生产批次失败:', error);
+    }
+  };
+
+  // 初始化数据
+  useEffect(() => {
+    fetchBatches();
+  }, []);
+
+  // 刷新数据
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchBatches();
+  };
 
   const getStatusColor = (status: ProductionBatch['status']) => {
     switch (status) {
@@ -76,12 +89,102 @@ const Production: React.FC = () => {
     }
   };
 
+  // 表格列配置
+  const columns = [
+    { key: 'name', label: '批次号', sortable: true },
+    { key: 'product', label: '产品', sortable: true },
+    { 
+      key: 'status', 
+      label: '状态', 
+      sortable: true,
+      render: (row: ProductionBatch) => (
+        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(row.status)}`}>
+          {getStatusText(row.status)}
+        </span>
+      )
+    },
+    { key: 'startDate', label: '开始时间', sortable: true },
+    { 
+      key: 'endDate', 
+      label: '结束时间', 
+      sortable: true,
+      render: (row: ProductionBatch) => row.endDate || '-'
+    },
+    { 
+      key: 'quantity', 
+      label: '产量', 
+      sortable: true,
+      render: (row: ProductionBatch) => `${row.quantity}/${row.targetQuantity}`
+    },
+    { 
+      key: 'actions', 
+      label: '操作',
+      width: '200px',
+      render: (row: ProductionBatch) => (
+        <div className="flex items-center justify-end space-x-2">
+          <Button 
+            variant="primary" 
+            size="sm"
+            className="mr-2"
+          >
+            详情
+          </Button>
+          {row.status === 'pending' && (
+            <Button 
+              variant="success" 
+              size="sm"
+              onClick={() => handleStartBatch(row.id)}
+            >
+              <Play size={16} className="mr-1" />
+              开始
+            </Button>
+          )}
+          {row.status === 'running' && (
+            <>
+              <Button 
+                variant="warning" 
+                size="sm"
+                className="mr-2"
+              >
+                <Pause size={16} className="mr-1" />
+                暂停
+              </Button>
+              <Button 
+                variant="success" 
+                size="sm"
+                onClick={() => handleCompleteBatch(row.id, row.quantity)}
+              >
+                <CheckCircle size={16} className="mr-1" />
+                完成
+              </Button>
+            </>
+          )}
+        </div>
+      )
+    },
+  ];
+
+  // 计算统计数据
+  const todayBatches = batches.filter(batch => batch.startDate.startsWith(new Date().toISOString().slice(0, 10))).length;
+  const completedBatches = batches.filter(batch => batch.status === 'completed').length;
+  const runningBatches = batches.filter(batch => batch.status === 'running').length;
+  const failedBatches = batches.filter(batch => batch.status === 'failed').length;
+
   return (
     <div className="space-y-6">
       {/* 页面标题 */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800">生产管理</h1>
-        <p className="text-gray-600">生产计划和批次管理</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-800">生产管理</h1>
+          <p className="text-gray-600">生产计划和批次管理</p>
+        </div>
+        <Button 
+          variant="secondary" 
+          onClick={handleRefresh}
+          disabled={refreshing}
+        >
+          刷新
+        </Button>
       </div>
 
       {/* 生产概览 */}
@@ -93,7 +196,7 @@ const Production: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">今日批次</p>
-              <p className="text-2xl font-bold text-gray-800">2</p>
+              <p className="text-2xl font-bold text-gray-800">{todayBatches}</p>
             </div>
           </div>
         </div>
@@ -104,7 +207,7 @@ const Production: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">已完成</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{completedBatches}</p>
             </div>
           </div>
         </div>
@@ -115,7 +218,7 @@ const Production: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">进行中</p>
-              <p className="text-2xl font-bold text-gray-800">1</p>
+              <p className="text-2xl font-bold text-gray-800">{runningBatches}</p>
             </div>
           </div>
         </div>
@@ -126,91 +229,27 @@ const Production: React.FC = () => {
             </div>
             <div>
               <p className="text-sm text-gray-600">异常</p>
-              <p className="text-2xl font-bold text-gray-800">0</p>
+              <p className="text-2xl font-bold text-gray-800">{failedBatches}</p>
             </div>
           </div>
         </div>
       </div>
 
       {/* 批次列表 */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        <div className="flex items-center justify-between mb-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">生产批次</h2>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+          <Button variant="primary">
             新增批次
-          </button>
+          </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  批次号
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  产品
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  状态
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  开始时间
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  结束时间
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  产量
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  操作
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {batches.map((batch) => (
-                <tr key={batch.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {batch.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {batch.product}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(batch.status)}`}>
-                      {getStatusText(batch.status)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {batch.startDate}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {batch.endDate || '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {batch.quantity}/{batch.targetQuantity}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button className="text-blue-600 hover:text-blue-900 mr-3">
-                      详情
-                    </button>
-                    {batch.status === 'pending' && (
-                      <button className="text-green-600 hover:text-green-900">
-                        开始
-                      </button>
-                    )}
-                    {batch.status === 'running' && (
-                      <button className="text-orange-600 hover:text-orange-900">
-                        暂停
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <Table
+          columns={columns}
+          data={batches}
+          loading={loading}
+          emptyText="暂无生产批次"
+        />
       </div>
     </div>
   );
