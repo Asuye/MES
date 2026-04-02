@@ -138,7 +138,7 @@ const System: React.FC = () => {
 
       {/* 用户管理 */}
       {activeTab === 'users' && (
-        <div className="bg-white p-6 rounded-lg shadow card-shadow">
+        <div className="bg-white p-6 rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">用户管理</h2>
             <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors flex items-center">
@@ -209,7 +209,7 @@ const System: React.FC = () => {
 
       {/* 系统日志 */}
       {activeTab === 'logs' && (
-        <div className="bg-white p-6 rounded-lg shadow card-shadow">
+        <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">系统日志</h2>
           
           <div className="overflow-x-auto">
@@ -255,7 +255,7 @@ const System: React.FC = () => {
 
       {/* 系统设置 */}
       {activeTab === 'settings' && (
-        <div className="bg-white p-6 rounded-lg shadow card-shadow">
+        <div className="bg-white p-6 rounded-lg shadow">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">系统设置</h2>
           
           <div className="space-y-6">
