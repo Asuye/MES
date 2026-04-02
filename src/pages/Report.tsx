@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart3, LineChart, PieChart, FileText, Download, Filter, FileDown, FileUp } from 'lucide-react';
 import { reportService } from '../services/api';
-import { Report } from '../types';
+import { Report as ReportType } from '../types';
 import Table from '../components/Table';
 import Button from '../components/Button';
 
 const Report: React.FC = () => {
-  const [reports, setReports] = useState<Report[]>([]);
+  const [reports, setReports] = useState<ReportType[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -56,7 +56,7 @@ const Report: React.FC = () => {
     fetchReports();
   };
 
-  const getStatusColor = (status: Report['status']) => {
+  const getStatusColor = (status: ReportType['status']) => {
     switch (status) {
       case 'generated':
         return 'bg-green-100 text-green-800';
@@ -67,7 +67,7 @@ const Report: React.FC = () => {
     }
   };
 
-  const getStatusText = (status: Report['status']) => {
+  const getStatusText = (status: ReportType['status']) => {
     switch (status) {
       case 'generated':
         return '已生成';
@@ -88,7 +88,7 @@ const Report: React.FC = () => {
       key: 'status', 
       label: '状态', 
       sortable: true,
-      render: (row: Report) => (
+      render: (row: ReportType) => (
         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(row.status)}`}>
           {getStatusText(row.status)}
         </span>
@@ -98,7 +98,7 @@ const Report: React.FC = () => {
       key: 'actions', 
       label: '操作',
       width: '180px',
-      render: (row: Report) => (
+      render: (row: ReportType) => (
         <div className="flex items-center justify-end space-x-2">
           {row.status === 'generated' && (
             <>
